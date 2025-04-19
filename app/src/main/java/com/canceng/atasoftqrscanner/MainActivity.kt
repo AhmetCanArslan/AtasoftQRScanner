@@ -32,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     private lateinit var barcodeScanner: BarcodeScanner
 
-    // Initialize Firestore only if available
+    // Initialize FireStore only if available
     private val firestore by lazy {
         try {
             com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
 
     private var scannerPaused = false
     private var errorMessage = mutableStateOf<String?>(null)
+    private var isLoading = mutableStateOf(false) // Add loading state
 
     // State for user not found dialog
     private var showUserNotFoundDialog = mutableStateOf(false)
@@ -119,6 +121,7 @@ class MainActivity : ComponentActivity() {
             QRCodeScannerTheme {
                 QRScannerScreen(
                     errorMessage = errorMessage.value,
+                    isLoading = isLoading.value, // Pass loading state
                     showUserNotFoundDialog = showUserNotFoundDialog.value,
                     showCamera = showCamera.value,
                     onStartCamera = {
@@ -133,8 +136,8 @@ class MainActivity : ComponentActivity() {
                         showUserNotFoundDialog.value = false
                         showCamera.value = true    // changed from false to true
                         scannerPaused = false
+                        isLoading.value = false // Ensure loading is reset
                     },
-                    onStopCamera = { showCamera.value = false } // new parameter to disable camera
                 )
             }
         }
@@ -225,13 +228,18 @@ class MainActivity : ComponentActivity() {
             return
         }
         
+        isLoading.value = true // Start loading
+        errorMessage.value = null // Clear previous errors
+
         // Check if Firebase is available
         if (firestore == null) {
             // If Firebase not available, still allow viewing the result
             val intent = Intent(this, UserInfoActivity::class.java)
             intent.putExtra("UUID", content)
             startActivity(intent)
+            // Reset state after starting activity
             scannerPaused = false
+            isLoading.value = false // Stop loading
             return
         }
         
@@ -240,166 +248,179 @@ class MainActivity : ComponentActivity() {
             ?.document(content)
             ?.get()
             ?.addOnSuccessListener { document ->
+                isLoading.value = false // Stop loading
                 if (document != null && document.exists()) {
                     // Launch UserInfoActivity with the content if found
                     val intent = Intent(this, UserInfoActivity::class.java)
                     intent.putExtra("UUID", content)
                     startActivity(intent)
+                    // scannerPaused will be reset in onResume
                 } else {
                     // Show the user not found dialog and hide camera
                     showUserNotFoundDialog.value = true
                     showCamera.value = false
+                    // scannerPaused will be reset when dialog is dismissed
                 }
             }
             ?.addOnFailureListener { e ->
-                Log.e(TAG, "Error checking Firestore: ${e.message}", e)
+                isLoading.value = false // Stop loading
+                Log.e(TAG, "Error checking FireStore: ${e.message}", e)
                 errorMessage.value = getString(R.string.error_checking_database, e.message)
-                scannerPaused = false
+                scannerPaused = false // Allow retrying
             }
     }
 
     @Composable
     fun QRScannerScreen(
         errorMessage: String?,
+        isLoading: Boolean, // Add isLoading parameter
         showUserNotFoundDialog: Boolean,
         showCamera: Boolean,
         onStartCamera: () -> Unit,
         onDismissDialog: () -> Unit,
-        onStopCamera: () -> Unit    // new lambda parameter
     ) {
         val lifecycleOwner = LocalLifecycleOwner.current
         val context = LocalContext.current
 
         Scaffold { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Top blank space
-                Box(
+            Box(modifier = Modifier.fillMaxSize()) { // Use Box for potential overlay
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.background)
-                )
-
-                // Adjusted: Camera preview area with reduced weight (was 4f, now 3f)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(3f)
-                        .padding(horizontal = 32.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Camera preview card with rounded corners
-                    Card(
+                    // Top blank space
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize(),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 4.dp
-                        )
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .background(MaterialTheme.colorScheme.background)
+                    )
+
+                    // Adjusted: Camera preview area with reduced weight (was 4f, now 3f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(3f)
+                            .padding(horizontal = 32.dp),
+                        contentAlignment = Alignment.Center // Keep content centered
                     ) {
-                        if (showCamera) {
-                            AndroidView(
-                                factory = { ctx ->
-                                    androidx.camera.view.PreviewView(ctx).apply {
-                                        implementationMode =
-                                            androidx.camera.view.PreviewView.ImplementationMode.COMPATIBLE
-                                    }
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                                update = { previewView ->
-                                    if (::cameraProviderFuture.isInitialized) {
-                                        cameraProviderFuture.addListener({
-                                            try {
-                                                bindPreview(lifecycleOwner, previewView)
-                                            } catch (e: Exception) {
-                                                Log.e(TAG, "Error binding camera: ${e.message}", e)
-                                            }
-                                        }, ContextCompat.getMainExecutor(context))
-                                    }
-                                }
+                        // Camera preview card with rounded corners
+                        Card(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 4.dp
                             )
-                        } else {
-                            // Show a placeholder until user starts camera
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.DarkGray),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
+                        ) {
+                            if (showCamera) {
+                                AndroidView(
+                                    factory = { ctx ->
+                                        androidx.camera.view.PreviewView(ctx).apply {
+                                            implementationMode =
+                                                androidx.camera.view.PreviewView.ImplementationMode.COMPATIBLE
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                    update = { previewView ->
+                                        if (::cameraProviderFuture.isInitialized) {
+                                            cameraProviderFuture.addListener({
+                                                try {
+                                                    bindPreview(lifecycleOwner, previewView)
+                                                } catch (e: Exception) {
+                                                    Log.e(TAG, "Error binding camera: ${e.message}", e)
+                                                }
+                                            }, ContextCompat.getMainExecutor(context))
+                                        }
+                                    }
+                                )
+                            } else {
+                                // Show a placeholder until user starts camera
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.DarkGray),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.camera_permission_info),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = Color.White,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(bottom = 16.dp)
-                                    )
-                                    Button(
-                                        onClick = onStartCamera,
-                                        modifier = Modifier.padding(horizontal = 32.dp)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.continue_button),
-                                            style = MaterialTheme.typography.titleMedium
+                                            text = stringResource(R.string.camera_permission_info),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = Color.White,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.padding(bottom = 16.dp)
                                         )
+                                        Button(
+                                            onClick = onStartCamera,
+                                            modifier = Modifier.padding(horizontal = 32.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.continue_button),
+                                                style = MaterialTheme.typography.titleMedium
+                                            )
+                                        }
                                     }
                                 }
+                            }
+                        }
+                        // Overlay Loading Indicator if loading and camera is shown
+                        if (isLoading && showCamera) {
+                             CircularProgressIndicator(
+                                 modifier = Modifier.align(Alignment.Center)
+                             )
+                        }
+                    }
+
+                    // Bottom space for error messages or instructions
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Show error message if not loading
+                        if (!errorMessage.isNullOrEmpty() && !isLoading) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Text(
+                                    text = errorMessage,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    // Use a larger text style
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
+                            }
+                        } else if (!isLoading) { // Show instructions only if not loading and no error
+                            if (showCamera) {
+                                Text(
+                                    text = stringResource(R.string.position_qr),
+                                    textAlign = TextAlign.Center,
+                                    // Use a larger text style
+                                    style = MaterialTheme.typography.headlineSmall
+                                )
                             }
                         }
                     }
                 }
 
-                // Bottom space for error messages or instructions
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!errorMessage.isNullOrEmpty()) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Text(
-                                text = errorMessage,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                // Use a larger text style
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    } else {
-                        if (showCamera) {
-                            Text(
-                                text = stringResource(R.string.position_qr),
-                                textAlign = TextAlign.Center,
-                                // Use a larger text style
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
+                // Show user not found dialog if needed (remains outside the Column)
+                if (showUserNotFoundDialog) {
+                    UserNotFoundDialog(onDismiss = onDismissDialog)
                 }
-            }
-
-            // Show user not found dialog if needed
-            if (showUserNotFoundDialog) {
-                UserNotFoundDialog(onDismiss = onDismissDialog)
             }
         }
     }
