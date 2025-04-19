@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Atasoft QR Scanner</string>
+    
+    <!-- Error messages in Turkish -->
+    <string name="camera_permission_required">Kamera izni gerekli</string>
+    <string name="camera_binding_failed">Kamera bağlantısı başarısız: %1$s</string>
+    <string name="camera_error">Kamera hatası: %1$s</string>
+    <string name="qr_scanned">QR Kod tarandı: %1$s</string>
+    <string name="uuid_not_found">UUID veritabanında bulunamadı</string>
+    <string name="error_checking_database">Veritabanı kontrol hatası: %1$s</string>
+    <string name="scanning_failed">Tarama başarısız oldu: %1$s</string>
+    <string name="error_updating_counter">Sayaç güncelleme hatası: %1$s</string>
+    <string name="position_qr">QR Kodu tarama alanına yerleştirin</string>
+    <string name="firestore_permission_denied">Firebase izni reddedildi. Lütfen veritabanı kurallarınızı kontrol edin.</string>
+    <string name="error_loading_data">Kullanıcı verisi yüklenemedi</string>
+    <string name="invalid_qr_format">Geçersiz QR kod formatı</string>
+    <string name="user_not_found">Kullanıcı veritabanında bulunamadı</string>
+    <string name="user_not_found_with_id">Kullanıcı bulunamadı.\nID: %1$s</string>
+    <string name="continue_button">Devam Et</string>
+    <string name="camera_permission_info">QR kodları taramak için kamera izni gereklidir. Taramaya başlamak için Devam Et\'e basın.</string>
+    
+    <!-- UserInfo Screen in Turkish -->
+    <string name="user_information">Kullanıcı Bilgisi</string>
+    <string name="loading">Yükleniyor…</string>
+    <string name="firebase_unavailable">Firebase kullanılamıyor.\nTaranan Kod: %1$s</string>
+    <string name="user_details">İsim: %1$s\nE-posta: %2$s\nZiyaret Sayısı: %3$d</string>
+    <string name="unknown_name">Bilinmiyor</string>
+    <string name="no_email">E-posta yok</string>
+    <string name="accept">Kabul Et</string>
+    <string name="reject">Reddet</string>
+    <string name="user_not_found_message">Kullanıcı Bulunamadı</string>
+    
+    <!-- Success messages -->
+    <string name="scan_success">QR Kodu başarıyla tarandı</string>
+    <string name="visit_recorded_success">Ziyaret başarıyla kaydedildi</string>
+    <string name="update_success">Bilgiler başarıyla güncellendi</string>
+    
+    <!-- Navigation -->
+    <string name="back">Geri</string>
+    <string name="home">Ana Sayfa</string>
+    <string name="retry">Tekrar Dene</string>
+    <string name="cancel">İptal</string>
+    
+    <!-- Additional UI elements -->
+    <string name="settings">Ayarlar</string>
+    <string name="history">Geçmiş</string>
+    <string name="scan_qr">QR Kod Tara</string>
+    <string name="visit_details">Ziyaret Detayları</string>
+    
+    <!-- Network related -->
+    <string name="network_error">Ağ hatası. Lütfen bağlantınızı kontrol edin.</string>
+    <string name="connection_timeout">Bağlantı zaman aşımı. Lütfen tekrar deneyin.</string>
+    
+    <!-- Accessibility -->
+    <string name="scan_button_description">Taramayı başlat butonu</string>
+    <string name="back_button_description">Geri git</string>
+    <string name="camera_preview_description">QR tarama için kamera önizlemesi</string>
+</resources>
