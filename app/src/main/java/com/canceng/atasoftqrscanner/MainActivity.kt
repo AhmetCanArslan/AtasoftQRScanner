@@ -341,7 +341,7 @@ class MainActivity : ComponentActivity() {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color.DarkGray),
+                                        .background(MaterialTheme.colorScheme.surfaceVariant), // Use theme color
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(
@@ -351,7 +351,7 @@ class MainActivity : ComponentActivity() {
                                         Text(
                                             text = stringResource(R.string.camera_permission_info),
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant, // Use theme color
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier.padding(bottom = 16.dp)
                                         )
