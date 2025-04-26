@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 // Use full import path to avoid ambiguity
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp // Add this import if not already present
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
     private var scannerPaused = false
     private var errorMessage = mutableStateOf<String?>(null)
     private var isLoading = mutableStateOf(false) // Add loading state
+    private var totalVisitors = mutableStateOf<Long?>(null) // State for total visitors
 
     // State for user not found dialog
     private var showUserNotFoundDialog = mutableStateOf(false)
@@ -122,6 +124,7 @@ class MainActivity : ComponentActivity() {
                 QRScannerScreen(
                     errorMessage = errorMessage.value,
                     isLoading = isLoading.value, // Pass loading state
+                    totalVisitors = totalVisitors.value, // Pass total visitors state
                     showUserNotFoundDialog = showUserNotFoundDialog.value,
                     showCamera = showCamera.value,
                     onStartCamera = {
@@ -148,6 +151,7 @@ class MainActivity : ComponentActivity() {
         ) {
             startCamera()
             showCamera.value = true   // changed: automatically start scanning without button click
+            fetchTotalVisitors() // Fetch total visitors count on initial grant
         } else {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
@@ -158,10 +162,37 @@ class MainActivity : ComponentActivity() {
         // Don't automatically show camera on resume
         // User needs to click Continue button explicitly
         scannerPaused = false
+        fetchTotalVisitors() // Refresh total visitors count when resuming
     }
 
     private fun startCamera() {
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+    }
+
+    private fun fetchTotalVisitors() {
+        if (firestore == null) {
+            Log.w(TAG, "Firestore not available, cannot fetch total visitors.")
+            totalVisitors.value = null // Indicate unavailable
+            return
+        }
+
+        firestore?.collection("users")
+            ?.get()
+            ?.addOnSuccessListener { querySnapshot ->
+                var sum: Long = 0
+                for (document in querySnapshot.documents) {
+                    val count = document.getLong("Counter") ?: 0L // Default to 0 if null
+                    sum += count
+                }
+                totalVisitors.value = sum
+                Log.d(TAG, "Total visitors fetched: $sum")
+            }
+            ?.addOnFailureListener { e ->
+                Log.e(TAG, "Error fetching total visitors: ${e.message}", e)
+                // Optionally show an error message or set count to null/error state
+                totalVisitors.value = null // Indicate error or unknown state
+                // errorMessage.value = getString(R.string.error_fetching_total_visitors, e.message) // Example error message
+            }
     }
     
     private fun bindPreview(lifecycleOwner: LifecycleOwner, previewView: androidx.camera.view.PreviewView) {
@@ -274,6 +305,7 @@ class MainActivity : ComponentActivity() {
     fun QRScannerScreen(
         errorMessage: String?,
         isLoading: Boolean, // Add isLoading parameter
+        totalVisitors: Long?, // Add totalVisitors parameter
         showUserNotFoundDialog: Boolean,
         showCamera: Boolean,
         onStartCamera: () -> Unit,
@@ -288,22 +320,24 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.SpaceBetween, // Keep SpaceBetween for overall structure
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Top blank space
+                    // Top blank space - Increased weight slightly to move camera down
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .weight(0.8f) // Increased weight from 0.5f
                             .background(MaterialTheme.colorScheme.background)
-                    )
+                    ) {
+                        // Content removed previously
+                    }
 
-                    // Adjusted: Camera preview area with reduced weight (was 4f, now 3f)
+                    // Camera preview area - Weight remains the same
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(3f)
+                            .weight(3f) // Kept weight at 3f
                             .padding(horizontal = 32.dp),
                         contentAlignment = Alignment.Center // Keep content centered
                     ) {
@@ -376,41 +410,58 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Bottom space for error messages or instructions
+                    // Bottom space for error messages, instructions, and total visitors - Decreased weight slightly
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .weight(1.2f) // Decreased weight from 1.5f
                             .background(MaterialTheme.colorScheme.background)
                             .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center // Keep content centered within this box
                     ) {
-                        // Show error message if not loading
-                        if (!errorMessage.isNullOrEmpty() && !isLoading) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Text(
-                                    text = errorMessage,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    // Use a larger text style
-                                    style = MaterialTheme.typography.headlineSmall
-                                )
+                        // Column to stack messages/instructions and total visitors
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center // Center items vertically within this Column
+                        ) {
+                            // Show error message if not loading
+                            if (!errorMessage.isNullOrEmpty() && !isLoading) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), // Add padding below card
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer
+                                    )
+                                ) {
+                                    Text(
+                                        text = errorMessage,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        textAlign = TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                }
+                            } else if (!isLoading) { // Show instructions only if not loading and no error
+                                if (showCamera) {
+                                    Text(
+                                        text = stringResource(R.string.position_qr),
+                                        modifier = Modifier.padding(bottom = 8.dp), // Add padding below text
+                                        textAlign = TextAlign.Center,
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                }
                             }
-                        } else if (!isLoading) { // Show instructions only if not loading and no error
-                            if (showCamera) {
+
+                            // Display Total Visitors count below other messages/instructions
+                            if (totalVisitors != null) {
                                 Text(
-                                    text = stringResource(R.string.position_qr),
+                                    text = stringResource(R.string.total_visitors, totalVisitors),
+                                    modifier = Modifier.fillMaxWidth(), // Take full width for centering
                                     textAlign = TextAlign.Center,
-                                    // Use a larger text style
-                                    style = MaterialTheme.typography.headlineSmall
+                                    style = MaterialTheme.typography.bodyLarge, // Reverted style
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
