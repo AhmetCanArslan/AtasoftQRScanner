@@ -104,6 +104,7 @@ fun UserInfoScreen(
     var userInfo by remember { mutableStateOf(context.getString(R.string.loading)) }
     var isLoading by remember { mutableStateOf(true) }
     var errorState by remember { mutableStateOf<String?>(null) }
+    var userExists by remember { mutableStateOf(false) } // Track if user exists
 
     // Try to get Firestore instance
     val firestore = try {
@@ -116,6 +117,7 @@ fun UserInfoScreen(
         if (firestore == null) {
             userInfo = context.getString(R.string.firebase_unavailable, qrContent)
             isLoading = false
+            userExists = false
             return@LaunchedEffect
         }
         
@@ -130,8 +132,10 @@ fun UserInfoScreen(
                     val telefon = document.getString("Telefon numaranız") ?: "N/A"
                     val counter = document.getLong("Counter") ?: 0
                     userInfo = "$isim\n$posta\n0$telefon\nZiyaret sayısı: $counter"
+                    userExists = true
                 } else {
                     userInfo = context.getString(R.string.user_not_found_with_id, qrContent)
+                    userExists = false
                 }
                 isLoading = false
             }
@@ -147,6 +151,7 @@ fun UserInfoScreen(
                 }
                 userInfo = context.getString(R.string.error_loading_data)
                 isLoading = false
+                userExists = false
             }
     }
 
@@ -198,7 +203,7 @@ fun UserInfoScreen(
                 // Reject Button
                 Button(
                     onClick = onRejectClicked,
-                    enabled = !isLoading,
+                    enabled = !isLoading && userExists, // Disable if user not found
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
@@ -217,7 +222,7 @@ fun UserInfoScreen(
                 // Accept Button
                 Button(
                     onClick = onAcceptClicked,
-                    enabled = !isLoading,
+                    enabled = !isLoading && userExists, // Disable if user not found
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 8.dp)
@@ -255,4 +260,3 @@ fun UserInfoScreen(
         }
     }
 }
-
