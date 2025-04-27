@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -112,6 +113,8 @@ fun UserInfoScreen(
     var errorState by remember { mutableStateOf<String?>(null) }
     var userExists by remember { mutableStateOf(false) } // Track if user exists
 
+    val isDarkTheme = isSystemInDarkTheme() // Check if dark theme is active
+
     // Try to get Firestore instance
     val firestore = try {
         FirebaseFirestore.getInstance()
@@ -170,16 +173,16 @@ fun UserInfoScreen(
             verticalArrangement = Arrangement.Top, // Align content to the top
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Add Logo at the top
+            // Add Logo at the top - Conditionally select based on theme
             Image(
-                painter = painterResource(id = R.drawable.ailogo), // Ensure ailogo.png is in res/drawable
+                painter = painterResource(id = if (isDarkTheme) R.drawable.logoblack else R.drawable.ailogo), // Select logo based on theme
                 contentDescription = "App Logo",
                 contentScale = ContentScale.Crop, // Ensure image fills the bounds
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp) // Apply padding first
-                    .clip(RoundedCornerShape(percent = 10)) // Apply clipping before size
-                    .size(100.dp) // Set the size after clipping
+                    .clip(RoundedCornerShape(percent = 30)) // Apply clipping before size
+                    .size(120.dp) // Set the size after clipping
             )
 
             Text(

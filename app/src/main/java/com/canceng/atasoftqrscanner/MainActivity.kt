@@ -17,6 +17,7 @@ import androidx.camera.core.Preview as CameraPreview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -303,6 +304,7 @@ class MainActivity : ComponentActivity() {
     ) {
         val lifecycleOwner = LocalLifecycleOwner.current
         val context = LocalContext.current
+        val isDarkTheme = isSystemInDarkTheme() // Check if dark theme is active
 
         Scaffold { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) { // Use Box for potential overlay
@@ -313,17 +315,16 @@ class MainActivity : ComponentActivity() {
                     // Removed Arrangement.SpaceBetween to allow logo at top
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Add Logo at the top
+                    // Add Logo at the top - Conditionally select based on theme
                     Image(
-                        painter = painterResource(id = R.drawable.ailogo),
+                        painter = painterResource(id = if (isDarkTheme) R.drawable.logoblack else R.drawable.ailogo), // Select logo based on theme
                         contentDescription = "App Logo",
                         contentScale = ContentScale.Crop, // Ensure image fills the bounds
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp)
-                            .padding(16.dp) // Apply padding first
-                            .clip(RoundedCornerShape(percent = 10)) // Apply clipping before size
-                            .size(100.dp) // Set the size after clipping
+                            .padding(vertical = 16.dp) // Apply padding first
+                            .clip(RoundedCornerShape(percent = 40)) // Apply clipping before size
+                            .size(150.dp) // Set the size after clipping
                     )
 
                     // Top blank space - Adjusted weight
@@ -553,4 +554,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
