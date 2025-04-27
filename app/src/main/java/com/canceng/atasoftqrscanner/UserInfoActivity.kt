@@ -4,12 +4,15 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,7 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,7 +43,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 class UserInfoActivity : ComponentActivity() {
     private val TAG = "UserInfoActivity"
-    
+
     // Initialize Firestore only if available
     private val firestore by lazy {
         try {
@@ -83,7 +89,7 @@ class UserInfoActivity : ComponentActivity() {
             Log.i(TAG, "Firebase not available, skipping counter increment for: $qrContent")
             return
         }
-        
+
         firestore?.collection("users")
             ?.document(qrContent)
             ?.update("Counter", com.google.firebase.firestore.FieldValue.increment(1))
@@ -95,8 +101,8 @@ class UserInfoActivity : ComponentActivity() {
 
 @Composable
 fun UserInfoScreen(
-    qrContent: String, 
-    error: String?, 
+    qrContent: String,
+    error: String?,
     onAcceptClicked: () -> Unit,
     onRejectClicked: () -> Unit
 ) {
@@ -120,7 +126,7 @@ fun UserInfoScreen(
             userExists = false
             return@LaunchedEffect
         }
-        
+
         firestore.collection("users")
             .document(qrContent)
             .get()
@@ -161,16 +167,28 @@ fun UserInfoScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Top, // Align content to the top
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Add Logo at the top
+            Image(
+                painter = painterResource(id = R.drawable.ailogo), // Ensure ailogo.png is in res/drawable
+                contentDescription = "App Logo",
+                contentScale = ContentScale.Crop, // Ensure image fills the bounds
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp) // Apply padding first
+                    .clip(RoundedCornerShape(percent = 10)) // Apply clipping before size
+                    .size(100.dp) // Set the size after clipping
+            )
+
             Text(
                 text = stringResource(R.string.user_information),
                 // Use a larger headline text style
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 fontSize = 28.sp,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 24.dp, top = 16.dp) // Added top padding
             )
 
             Card(
@@ -218,7 +236,7 @@ fun UserInfoScreen(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-                
+
                 // Accept Button
                 Button(
                     onClick = onAcceptClicked,
@@ -234,7 +252,7 @@ fun UserInfoScreen(
                     )
                 }
             }
-            
+
             if (!error.isNullOrEmpty() || !errorState.isNullOrEmpty()) {
                 Card(
                     modifier = Modifier

@@ -3,20 +3,16 @@ package com.canceng.atasoftqrscanner
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-// Use full import path to avoid ambiguity
 import androidx.camera.core.Preview as CameraPreview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.compose.foundation.Image
@@ -28,33 +24,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-// Use full import path to avoid ambiguity
-import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Add this import if not already present
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -171,7 +161,7 @@ class MainActivity : ComponentActivity() {
 
     private fun fetchTotalVisitors() {
         if (firestore == null) {
-            Log.w(TAG, "Firestore not available, cannot fetch total visitors.")
+            Log.w(TAG, "FireStore not available, cannot fetch total visitors.")
             totalVisitors.value = null // Indicate unavailable
             return
         }
@@ -320,14 +310,27 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
-                    verticalArrangement = Arrangement.SpaceBetween, // Keep SpaceBetween for overall structure
+                    // Removed Arrangement.SpaceBetween to allow logo at top
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Top blank space - Increased weight slightly to move camera down
+                    // Add Logo at the top
+                    Image(
+                        painter = painterResource(id = R.drawable.ailogo),
+                        contentDescription = "App Logo",
+                        contentScale = ContentScale.Crop, // Ensure image fills the bounds
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp)
+                            .padding(16.dp) // Apply padding first
+                            .clip(RoundedCornerShape(percent = 10)) // Apply clipping before size
+                            .size(100.dp) // Set the size after clipping
+                    )
+
+                    // Top blank space - Adjusted weight
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(0.8f) // Increased weight from 0.5f
+                            .weight(0.5f) // Adjusted weight
                             .background(MaterialTheme.colorScheme.background)
                     ) {
                         // Content removed previously
@@ -410,20 +413,20 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Bottom space for error messages, instructions, and total visitors - Decreased weight slightly
+                    // Bottom space for error messages, instructions, and total visitors - Adjusted weight
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1.2f) // Decreased weight from 1.5f
+                            .weight(1.5f) // Adjusted weight back
                             .background(MaterialTheme.colorScheme.background)
                             .padding(16.dp),
-                        contentAlignment = Alignment.Center // Keep content centered within this box
+                        contentAlignment = Alignment.TopCenter // Align content to top within this box
                     ) {
                         // Column to stack messages/instructions and total visitors
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center // Center items vertically within this Column
+                            verticalArrangement = Arrangement.Top // Align items to top
                         ) {
                             // Show error message if not loading
                             if (!errorMessage.isNullOrEmpty() && !isLoading) {
